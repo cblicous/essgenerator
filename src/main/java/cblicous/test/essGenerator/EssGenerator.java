@@ -9,9 +9,13 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+
+import javaslang.Function1;
+import javaslang.Function2;
 
 public class EssGenerator {
 
@@ -20,7 +24,7 @@ public class EssGenerator {
 	}
 
 	/**
-	 * The Class CodeRow if it is a code row 
+	 * The Class CodeRow if it is a code row
 	 */
 	class CodeRow extends Row {
 		public final String variableName;
@@ -46,7 +50,7 @@ public class EssGenerator {
 		}
 	}
 
-	private Function<String, Row> mapToRow = (line) -> {
+	private Function1<String, Row> mapToRow = (line) -> {
 		if (!line.substring(0, 1).equals("/")) {
 
 			String[] p = line.split(",");
@@ -64,6 +68,33 @@ public class EssGenerator {
 		}
 	};
 
+	private Function1<Row, String> generateVariables = (row) -> {
+		String result;
+		if (row instanceof CodeRow) {
+			result = "private " + ((CodeRow) row).variableType + " " + ((CodeRow) row).variableName + "; \n";
+		} else {
+			result = ((CommentRow) row).comment + " \n";
+		}
+		return result;
+	};
+
+	private Function2<Row, Integer, String> generateCode = (row, i) -> {
+		if (row instanceof CodeRow) {
+
+			String result;
+			String variableNameUpperCase = ((CodeRow) row).variableName;
+			variableNameUpperCase = Character.toUpperCase(variableNameUpperCase.charAt(0))
+					+ variableNameUpperCase.substring(1);
+			result = " @Field(offset = " + i + ", length = " + ((CodeRow) row).offset + ") \n" + "public "
+					+ ((CodeRow) row).variableType + " get" + variableNameUpperCase + "(){\n" + "return "
+					+ ((CodeRow) row).variableName + "; \n" + "} \n";
+			i = i + ((CodeRow) row).offset;
+			return result;
+		} else {
+			return "";
+		}
+	};
+
 	/**
 	 * takes in a sourcefile "name","length","type" and generated a pojo out of
 	 * it
@@ -77,38 +108,20 @@ public class EssGenerator {
 			is = new FileInputStream(new File(sourceFile));
 			BufferedReader br = new BufferedReader(new InputStreamReader(is));
 
-			List<Row> rows = br.lines().map(mapToRow).collect(Collectors.toList());
+			ArrayList<Row> rows = new ArrayList<Row>(br.lines().map(mapToRow).collect(Collectors.toList()));
 
 			StringBuffer resultFileStringBuffer = new StringBuffer();
 			// write the variables
-			rows.forEach(row -> {
+			resultFileStringBuffer.append(rows.stream().map(generateVariables).collect(Collectors.joining()));
 
-				String result;
-				if (row instanceof CodeRow) {
-					result = "private " + ((CodeRow) row).variableType + " " + ((CodeRow) row).variableName + "; \n";
-				} else {
-					result = ((CommentRow) row).comment + " \n";
-					;
-				}
-				resultFileStringBuffer.append(result);
+			resultFileStringBuffer.append(rows.stream().map(generateVariables).collect(Collectors.joining()));
 
-			});
-
-			
-			// Todo , tryout javaslang
+			// first tryout , lets improve
 			int i = 0;
 			for (Row row : rows) {
 				if (row instanceof CodeRow) {
-					String result;
-					String variableNameUpperCase = ((CodeRow) row).variableName;
-					variableNameUpperCase = Character.toUpperCase(variableNameUpperCase.charAt(0))
-							+ variableNameUpperCase.substring(1);
-					result = " @Field(offset = " + i + ", length = " + ((CodeRow) row).offset + ") \n" + "public "
-							+ ((CodeRow) row).variableType + " get" + variableNameUpperCase + "(){\n" + "return "
-							+ ((CodeRow) row).variableName + "; \n" + "} \n";
-
+					resultFileStringBuffer.append(generateCode.apply(row, i));
 					i = i + ((CodeRow) row).offset;
-					resultFileStringBuffer.append(result);
 
 				}
 			}
