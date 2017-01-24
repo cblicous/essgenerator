@@ -113,9 +113,6 @@ public class EssGenerator {
 			StringBuffer resultFileStringBuffer = new StringBuffer();
 			// write the variables
 			resultFileStringBuffer.append(rows.stream().map(generateVariables).collect(Collectors.joining()));
-
-			resultFileStringBuffer.append(rows.stream().map(generateVariables).collect(Collectors.joining()));
-
 			// first tryout , lets improve
 			int i = 0;
 			for (Row row : rows) {
