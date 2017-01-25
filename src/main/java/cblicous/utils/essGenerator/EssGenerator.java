@@ -1,4 +1,4 @@
-package cblicous.test.essGenerator;
+package cblicous.utils.essGenerator;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -19,18 +19,19 @@ import java.util.stream.IntStream;
 
 import javaslang.Function1;
 import javaslang.Function2;
+import javaslang.Function3;
 import javaslang.Tuple2;
 
 public class EssGenerator {
 
-	class Row {
+	public class Row {
 
 	}
 
 	/**
 	 * The Class CodeRow if it is a code row
 	 */
-	class CodeRow extends Row {
+	 public class CodeRow extends Row {
 		public final String variableName;
 		public final String variableType;
 		public final int offset;
@@ -46,7 +47,7 @@ public class EssGenerator {
 	/**
 	 * The Class Comment Row if it is a comment row (starts with /)
 	 */
-	class CommentRow extends Row {
+	public class CommentRow extends Row {
 		private final String comment;
 
 		public CommentRow(String comment) {
@@ -82,20 +83,26 @@ public class EssGenerator {
 		return result;
 	};
 
-	private Function2<Row, Integer, String> generateCode = (row, i) -> {
-		if (row instanceof CodeRow) {
+	protected String generateCode(javaslang.collection.List<Row> rowList, Integer i, String result) {
+		if (rowList.size() >= 1) {
+			Row row = rowList.head();
 
-			String result;
-			String variableNameUpperCase = ((CodeRow) row).variableName;
-			variableNameUpperCase = Character.toUpperCase(variableNameUpperCase.charAt(0))
-					+ variableNameUpperCase.substring(1);
-			result = " @Field(offset = " + i + ", length = " + ((CodeRow) row).offset + ") \n" + "public "
-					+ ((CodeRow) row).variableType + " get" + variableNameUpperCase + "(){\n" + "return "
-					+ ((CodeRow) row).variableName + "; \n" + "} \n";
-			i = i + ((CodeRow) row).offset;
-			return result;
+			if (row instanceof CodeRow) {
+				String renderedCode;
+				String variableNameUpperCase = ((CodeRow) row).variableName;
+				variableNameUpperCase = Character.toUpperCase(variableNameUpperCase.charAt(0))
+						+ variableNameUpperCase.substring(1);
+				renderedCode = " @Field(offset = " + i + ", length = " + ((CodeRow) row).offset + ") \n" + "public "
+						+ ((CodeRow) row).variableType + " get" + variableNameUpperCase + "(){\n" + "return "
+						+ ((CodeRow) row).variableName + "; \n" + "} \n";
+				i = i + ((CodeRow) row).offset;
+				String concenatedResult = result + renderedCode;
+				return generateCode(rowList.pop(),i,concenatedResult);
+			} else {
+				return generateCode(rowList.pop(),i,result);
+			}
 		} else {
-			return "";
+			return result;
 		}
 	};
 
@@ -118,20 +125,10 @@ public class EssGenerator {
 			// write the variables
 			resultFileStringBuffer.append(rows.stream().map(generateVariables).collect(Collectors.joining()));
 			// first tryout , lets improve
-
 			
-			// oky that counts , but still now what we want 
-			// we need i+offset 
-			// to generate 0,10,14,18
-			String code = javaslang.collection.List.range(0,rows.size()).map(i->generateCode.apply(rows.get(i), i)).fold("", String::concat);
-			
-			resultFileStringBuffer.append(code);
-			int i = 0;
-			for (Row row : rows) {
-				resultFileStringBuffer.append(generateCode.apply(row, i));
-				i = i + ((CodeRow) row).offset;
-			}
-
+			javaslang.collection.List<Row>list = javaslang.collection.List.ofAll(rows);
+			resultFileStringBuffer.append(generateCode(list,0,""));
+	
 			Files.write(Paths.get(destinationFile), resultFileStringBuffer.toString().getBytes());
 			System.out.println("Wrote " + rows.size() + " Fields to " + destinationFile);
 		} catch (FileNotFoundException e1) {
