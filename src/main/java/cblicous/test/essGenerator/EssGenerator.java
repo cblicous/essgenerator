@@ -10,12 +10,16 @@ import java.io.InputStreamReader;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import javaslang.Function1;
 import javaslang.Function2;
+import javaslang.Tuple2;
 
 public class EssGenerator {
 
@@ -114,13 +118,18 @@ public class EssGenerator {
 			// write the variables
 			resultFileStringBuffer.append(rows.stream().map(generateVariables).collect(Collectors.joining()));
 			// first tryout , lets improve
+
+			
+			// oky that counts , but still now what we want 
+			// we need i+offset 
+			// to generate 0,10,14,18
+			String code = javaslang.collection.List.range(0,rows.size()).map(i->generateCode.apply(rows.get(i), i)).fold("", String::concat);
+			
+			resultFileStringBuffer.append(code);
 			int i = 0;
 			for (Row row : rows) {
-				if (row instanceof CodeRow) {
-					resultFileStringBuffer.append(generateCode.apply(row, i));
-					i = i + ((CodeRow) row).offset;
-
-				}
+				resultFileStringBuffer.append(generateCode.apply(row, i));
+				i = i + ((CodeRow) row).offset;
 			}
 
 			Files.write(Paths.get(destinationFile), resultFileStringBuffer.toString().getBytes());
