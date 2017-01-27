@@ -2,7 +2,7 @@ Simple Generator for fixedformat4j
 
 Generates code for classes coming from a CSV File consisting of the following format: 
 
-<fieldname>,<length>,<javatype>
+"fieldname","length","javatype"
 
 like as follows: 
 
