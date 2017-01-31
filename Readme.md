@@ -6,7 +6,8 @@ Generates code for classes coming from a CSV File consisting of the following fo
 
 like as follows: 
 
-ESS Zeilenlänge,4,int
-Warenkorb-ID,12,String
+"ESS Zeilenlänge,4,int"
+
+"Warenkorb-ID,12,String"
 
 Will cleanup umlauts etc
